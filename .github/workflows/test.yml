@@ -17,79 +17,53 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # To jest środowisko wymagające approval w repo → Settings → Environments
     environment: test
     env:
       REQUIRED_TOKEN: ${{ inputs.region }}
-      TARGET_ENVIRONMENT: test # opcjonalnie: filtruj approval po nazwie środowiska
+      TARGET_ENVIRONMENT: test
     outputs:
-      blocked_deployment: ${{ steps.approval_check.outputs.approval_comment }}
+      blocked_deployment: ${{ steps.approval_check.outputs.valid }}
     steps:
-      - name: "Pre-check: odczytaj komentarz z environment approval i zweryfikuj token"
+      - name: Minimal approval check
         id: approval_check
         uses: actions/github-script@v7
         with:
           script: |
             const run_id = process.env.GITHUB_RUN_ID;
             const { owner, repo } = context.repo;
+            const required = process.env.REQUIRED_TOKEN;
+            const targetEnv = process.env.TARGET_ENVIRONMENT;
 
-            // 1) Pobierz historię approvals dla tego workflow run
-            // https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}/approvals
+            // pobierz approvals
             const res = await github.request(
               'GET /repos/{owner}/{repo}/actions/runs/{run_id}/approvals',
               { owner, repo, run_id }
             );
 
             const approvals = Array.isArray(res.data) ? res.data : [];
-            core.info(`Approvals payload:\n${JSON.stringify(approvals, null, 2)}`);
 
-            if (approvals.length === 0) {
-              core.setFailed('Brak rekordów approvals dla tego runa.');
+            // wybierz zatwierdzenia dla środowiska
+            const match = approvals.find(a =>
+              (a.state || '').toLowerCase() === 'approved' &&
+              (a.environments || []).some(e =>
+                (e.name || '').toLowerCase() === targetEnv.toLowerCase()
+              )
+            );
+
+            if (!match) {
+              core.setOutput('valid', 'false');
               return;
             }
 
-            const targetEnv = process.env.TARGET_ENVIRONMENT;
-            const required = process.env.REQUIRED_TOKEN;
+            const comment = (match.comment || '').trim();
+            const ok = new RegExp(required, 'i').test(comment);
 
-            // 2) Wybierz najnowsze zatwierdzenie (state == 'approved'),
-            //    opcjonalnie tylko dla wskazanego środowiska
-            const approvedForEnv = approvals
-              .filter(a => (a.state || '').toLowerCase() === 'approved')
-              .filter(a => {
-                if (!targetEnv) return true;
-                const envs = Array.isArray(a.environments) ? a.environments : [];
-                return envs.some(e => (e.name || '').toLowerCase() === targetEnv.toLowerCase());
-              })
-              // sort po czasie, jeśli jest dostępny (fallback do kolejności zwróconej)
-              .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            core.setOutput('valid', ok ? 'true' : 'false');
 
-            if (approvedForEnv.length === 0) {
-              core.setFailed(`Nie znaleziono zatwierdzenia 'approved' dla środowiska '${targetEnv}'.`);
-              return;
-            }
-
-            const approval = approvedForEnv[0];
-            const comment = (approval.comment || '').trim();
-
-            core.setOutput('approval_comment', comment);
-            core.info(`Komentarz z approval: "${comment}"`);
-
-            // 3) Walidacja wzorca/tokena w komentarzu
-            const regex = new RegExp(required, 'i');
-            if (!regex.test(comment)) {
-              core.setFailed(`Komentarz approval nie zawiera wymaganego ciągu: "${required}".`);
-            } else {
-              core.info(`OK — komentarz zawiera wymagany token "${required}".`);
-            }
-
-      # (opcjonalne) Użyj komentarza dalej w jobie:
-      - name: Pokaż wynik pre-check
-        run: |
-          echo "Approval comment = ${{ steps.approval_check.outputs.approval_comment }}"
   deploy:
     runs-on: ubuntu-latest
     needs: check
-    if: ${{ needs.check.outputs.blocked_deployment != 'sand_dev' }}
+    if: ${{ needs.check.outputs.blocked_deployment == 'false' }}
     steps:
       - name: Deploy...
         run: echo "Deployuję po poprawnym pre-check..."
