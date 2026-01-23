@@ -28,9 +28,9 @@ on:
         required: true
         type: string
 
-permissions:
-  actions: read
-  deployments: read
+# permissions:
+#   actions: read
+#   deployments: read
 
 jobs:
   check:
