@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.env }}
     env:
-      REQUIRED_TOKEN: ${{ inputs.domain }}
+      REQUIRED_STRING: "${{ inputs.domain }}-${{ inputs.env }}"
       TARGET_ENVIRONMENT: ${{ inputs.env }}
     outputs:
       deployment: ${{ steps.approval_check.outputs.valid }}
@@ -49,7 +49,7 @@ jobs:
           script: |
             const run_id = process.env.GITHUB_RUN_ID;
             const { owner, repo } = context.repo;
-            const required = process.env.REQUIRED_TOKEN;
+            const required = process.env.REQUIRED_STRING;
             const targetEnv = process.env.TARGET_ENVIRONMENT;
 
             const res = await github.request(

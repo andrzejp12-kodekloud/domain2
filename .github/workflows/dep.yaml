@@ -1,4 +1,4 @@
-name: 1.1 Deploy Domain to DEV
+name: Deploy domains
 
 on:
   workflow_dispatch:
@@ -10,6 +10,12 @@ on:
         options:
           - test
           - prod
+  workflow_call:
+    inputs:
+      env:
+        description: Region
+        required: true
+        type: string
 
 jobs:
   deploy:
@@ -24,4 +30,4 @@ jobs:
       contents: write
     with:
       domain: ${{ matrix.domain }}
-      env: test
+      env: ${{ inputs.env }}
