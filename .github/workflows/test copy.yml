@@ -1,29 +1,21 @@
-name: Deploy with approval pre-check
+name: Deploy with approval pre-check copy
 
 on:
   workflow_dispatch:
-    inputs:
-      region:
-        description: Select region
-        required: true
-        type: choice
-        options:
-          - sand_dev
-          - sand_prd
+
 permissions:
   actions: read # potrzebne do odczytu approvals
   deployments: read
 
 jobs:
-  check:
+  deploy:
     runs-on: ubuntu-latest
     # To jest środowisko wymagające approval w repo → Settings → Environments
     environment: test
     env:
-      REQUIRED_TOKEN: ${{ inputs.region }}
+      REQUIRED_TOKEN: sand_dev # czego szukamy w komentarzu zatwierdzenia
       TARGET_ENVIRONMENT: test # opcjonalnie: filtruj approval po nazwie środowiska
-    outputs:
-      blocked_deployment: ${{ steps.approval_check.outputs.approval_comment }}
+
     steps:
       - name: "Pre-check: odczytaj komentarz z environment approval i zweryfikuj token"
         id: approval_check
@@ -84,12 +76,8 @@ jobs:
 
       # (opcjonalne) Użyj komentarza dalej w jobie:
       - name: Pokaż wynik pre-check
-        run: |
-          echo "Approval comment = ${{ steps.approval_check.outputs.approval_comment }}"
-  deploy:
-    runs-on: ubuntu-latest
-    needs: check
-    if: ${{ needs.check.outputs.blocked_deployment != 'sand_dev' }}
-    steps:
+        run: echo "Approval comment = ${{ steps.approval_check.outputs.approval_comment }}"
+
+      # Tu dopiero właściwe kroki deployu — dojdą do skutku tylko jeśli pre-check nie ustawi 'failed'
       - name: Deploy...
         run: echo "Deployuję po poprawnym pre-check..."
