@@ -1,46 +1,83 @@
-# This is a basic workflow to help you get started with Actions
+name: Deploy with approval pre-check
 
-name: Test
-
-# Controls when the workflow will run
 on:
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
-jobs:
-  # This workflow contains a single job called "build"
-  build:
-    environment: "test"
-    runs-on: ubuntu-latest
+permissions:
+  actions: read # potrzebne do odczytu approvals
+  deployments: read
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # To jest środowisko wymagające approval w repo → Settings → Environments
+    environment: test
+    env:
+      REQUIRED_TOKEN: sand_dev # czego szukamy w komentarzu zatwierdzenia
+      TARGET_ENVIRONMENT: test # opcjonalnie: filtruj approval po nazwie środowiska
+
     steps:
-      - name: Read environment approval comment
-        id: read_comment
+      - name: "Pre-check: odczytaj komentarz z environment approval i zweryfikuj token"
+        id: approval_check
         uses: actions/github-script@v7
         with:
           script: |
             const run_id = process.env.GITHUB_RUN_ID;
             const { owner, repo } = context.repo;
 
-            // Pobranie historii approvals dla tego workflow run
+            // 1) Pobierz historię approvals dla tego workflow run
+            // https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}/approvals
             const res = await github.request(
               'GET /repos/{owner}/{repo}/actions/runs/{run_id}/approvals',
               { owner, repo, run_id }
             );
 
             const approvals = Array.isArray(res.data) ? res.data : [];
-            const envName = 'test'.toLowerCase();
+            core.info(`Approvals payload:\n${JSON.stringify(approvals, null, 2)}`);
 
-            // Znajdź APPROVE dla konkretnego environment
-            const matched = approvals.filter(a =>
-              (a.environment?.name || '').toLowerCase() === envName &&
-              a.state === 'approved'
-            );
+            if (approvals.length === 0) {
+              core.setFailed('Brak rekordów approvals dla tego runa.');
+              return;
+            }
 
-            const comment = matched.length > 0
-              ? matched[matched.length - 1].comment || ''
-              : '';
+            const targetEnv = process.env.TARGET_ENVIRONMENT;
+            const required = process.env.REQUIRED_TOKEN;
 
-            core.info(`COMMENT FROM APPROVAL: "${comment}"`);
-            core.setOutput('comment', comment);
+            // 2) Wybierz najnowsze zatwierdzenie (state == 'approved'),
+            //    opcjonalnie tylko dla wskazanego środowiska
+            const approvedForEnv = approvals
+              .filter(a => (a.state || '').toLowerCase() === 'approved')
+              .filter(a => {
+                if (!targetEnv) return true;
+                const envs = Array.isArray(a.environments) ? a.environments : [];
+                return envs.some(e => (e.name || '').toLowerCase() === targetEnv.toLowerCase());
+              })
+              // sort po czasie, jeśli jest dostępny (fallback do kolejności zwróconej)
+              .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+            if (approvedForEnv.length === 0) {
+              core.setFailed(`Nie znaleziono zatwierdzenia 'approved' dla środowiska '${targetEnv}'.`);
+              return;
+            }
+
+            const approval = approvedForEnv[0];
+            const comment = (approval.comment || '').trim();
+
+            core.setOutput('approval_comment', comment);
+            core.info(`Komentarz z approval: "${comment}"`);
+
+            // 3) Walidacja wzorca/tokena w komentarzu
+            const regex = new RegExp(required, 'i');
+            if (!regex.test(comment)) {
+              core.setFailed(`Komentarz approval nie zawiera wymaganego ciągu: "${required}".`);
+            } else {
+              core.info(`OK — komentarz zawiera wymagany token "${required}".`);
+            }
+
+      # (opcjonalne) Użyj komentarza dalej w jobie:
+      - name: Pokaż wynik pre-check
+        run: echo "Approval comment = ${{ steps.approval_check.outputs.approval_comment }}"
+
+      # Tu dopiero właściwe kroki deployu — dojdą do skutku tylko jeśli pre-check nie ustawi 'failed'
+      - name: Deploy...
+        run: echo "Deployuję po poprawnym pre-check..."
