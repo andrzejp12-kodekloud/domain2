@@ -17,7 +17,7 @@ jobs:
       TARGET_ENVIRONMENT: test # opcjonalnie: filtruj approval po nazwie środowiska
 
     steps:
-      - name: "Pre-check: odczytaj komentarz z environment approval i zweryfikuj token"
+      - name: "Pre-check"
         id: approval_check
         uses: actions/github-script@v7
         with:

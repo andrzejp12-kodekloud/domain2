@@ -34,6 +34,7 @@ on:
 
 jobs:
   check:
+    name: Approval ${{ inputs.domain }}-${{ inputs.env }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.env }}
     env:
@@ -42,7 +43,7 @@ jobs:
     outputs:
       deployment: ${{ steps.approval_check.outputs.valid }}
     steps:
-      - name: Minimal approval check
+      - name: Approval check
         id: approval_check
         uses: actions/github-script@v8
         with:
