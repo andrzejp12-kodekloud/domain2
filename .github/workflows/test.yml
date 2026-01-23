@@ -3,13 +3,20 @@ name: Deploy with approval pre-check
 on:
   workflow_dispatch:
     inputs:
-      region:
-        description: Select region
+      domain:
+        description: Select domain
         required: true
         type: choice
         options:
           - sand_dev
           - sand_prd
+      env:
+        description: Select environment
+        required: true
+        type: choice
+        options:
+          - test
+          - prod
 permissions:
   actions: read # potrzebne do odczytu approvals
   deployments: read
@@ -17,16 +24,16 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    environment: test
+    environment: ${{ inputs.env }}
     env:
-      REQUIRED_TOKEN: ${{ inputs.region }}
-      TARGET_ENVIRONMENT: test
+      REQUIRED_TOKEN: ${{ inputs.domain }}
+      TARGET_ENVIRONMENT: ${{ inputs.env }}
     outputs:
       blocked_deployment: ${{ steps.approval_check.outputs.valid }}
     steps:
       - name: Minimal approval check
         id: approval_check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const run_id = process.env.GITHUB_RUN_ID;
