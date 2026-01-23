@@ -1,0 +1,27 @@
+name: 1.1 Deploy Domain to DEV
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Select env
+        required: true
+        type: choice
+        options:
+          - test
+          - prod
+
+jobs:
+  deploy:
+    name: Deploy
+    strategy:
+      matrix:
+        domain: ["sand", "sand2", "sand3", "sand4"]
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
+    permissions:
+      actions: read
+      contents: write
+    with:
+      domain: ${{ matrix.domain }}
+      env: test
