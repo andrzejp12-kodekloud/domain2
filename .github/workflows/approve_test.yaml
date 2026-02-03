@@ -19,7 +19,9 @@ jobs:
     steps:
       - name: Get RUNNER_LABEL
         id: get-runner-label
-        run: echo "step1"
+        run: |
+          echo "step1"
+          exit 1
 
   job2:
     environment: "${{ inputs.env }}"
@@ -35,7 +37,7 @@ jobs:
         
   job3:
     environment: "${{ inputs.env }}"
-    if: ${{ needs.job2.result == 'success' || needs.job2.result == 'skipped' }}
+    if: ${{ always() && (needs.job2.result == 'success' || needs.job2.result == 'skipped') }}
     needs:
       - job1
       - job2
