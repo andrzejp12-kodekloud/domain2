@@ -19,5 +19,15 @@ jobs:
     steps:
       - name: Get RUNNER_LABEL
         id: get-runner-label
-        run: |
-          echo "step1"
+        run: echo "step1"
+
+  job2:
+    environment: "${{ inputs.env }}"
+    needs:
+      - job1
+    name: Approval
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approval step
+        id: step-approval-id
+        run: echo "approval"
