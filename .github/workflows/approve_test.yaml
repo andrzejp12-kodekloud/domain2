@@ -22,27 +22,25 @@ jobs:
         run: |
           echo "step1"
 
-  job2:
+  deployment-approval:
     environment: "${{ inputs.env }}"
     if: ${{ inputs.env == 'test' && github.ref != 'refs/heads/main' }}
     needs:
       - job1
-    name: Approval
+    name: Approval for deployment from feature branch
     runs-on: ubuntu-latest
     steps:
-      - name: Approval step
-        id: step-approval-id
-        run: echo "approval"
+        - run: echo "Deployment from feature branch approved"
         
   job3:
     environment: "${{ inputs.env }}"
     if: ${{ 
             always() && (needs.job1.result == 'success') && 
-            (needs.job2.result == 'success' || needs.job2.result == 'skipped') 
+            (needs.deployment-approval.result == 'success' || needs.deployment-approval.result == 'skipped') 
         }}
     needs:
       - job1
-      - job2
+      - deployment-approval
     name: Apply
     runs-on: ubuntu-latest
     steps:
