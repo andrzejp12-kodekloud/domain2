@@ -23,6 +23,7 @@ jobs:
 
   job2:
     environment: "${{ inputs.env }}"
+    if: ${{ inputs.env == "test" }}
     needs:
       - job1
     name: Approval
