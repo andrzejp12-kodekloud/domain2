@@ -10,3 +10,14 @@ on:
         options:
           - test
           - prod
+
+jobs:
+  job1:
+    environment: "${{ inputs.env }}-1"
+    name: Prepare job environment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get RUNNER_LABEL
+        id: get-runner-label
+        run: |
+          echo "step1"
