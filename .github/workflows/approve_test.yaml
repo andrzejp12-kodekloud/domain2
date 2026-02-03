@@ -1,0 +1,12 @@
+name: Deploy with approval pre-check
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Select env
+        required: true
+        type: choice
+        options:
+          - test
+          - prod
