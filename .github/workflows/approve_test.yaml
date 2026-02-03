@@ -1,4 +1,4 @@
-name: Deploy with approval pre-check
+name: Deploy feature pre-check
 
 on:
   workflow_dispatch:
