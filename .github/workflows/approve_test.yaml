@@ -32,3 +32,15 @@ jobs:
       - name: Approval step
         id: step-approval-id
         run: echo "approval"
+        
+  job3:
+    environment: "${{ inputs.env }}"
+    needs:
+      - job1
+      - job2
+    name: Apply
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approval step
+        id: step-approval-id
+        run: echo "approval"
