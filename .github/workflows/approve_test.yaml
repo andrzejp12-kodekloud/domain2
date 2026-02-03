@@ -35,9 +35,9 @@ jobs:
         
   job3:
     environment: "${{ inputs.env }}"
+    if: ${{ needs.job2.result == 'success' || needs.job2.result == 'skipped' }}
     needs:
       - job1
-      - job2
     name: Apply
     runs-on: ubuntu-latest
     steps:
