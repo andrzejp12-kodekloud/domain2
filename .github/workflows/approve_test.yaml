@@ -24,7 +24,7 @@ jobs:
 
   job2:
     environment: "${{ inputs.env }}"
-    if: ${{ inputs.env == 'test' }}
+    if: ${{ inputs.env == 'test' && github.ref != 'refs/heads/main' }}
     needs:
       - job1
     name: Approval
