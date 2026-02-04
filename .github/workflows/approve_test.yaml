@@ -21,7 +21,7 @@ jobs:
         id: get-runner-label
         run: |
           echo "step1"
-
+#TODO change region after testing
   deployment-approval:
     environment: "${{ inputs.env }}"
     if: ${{ inputs.env == 'test' && github.ref != 'refs/heads/main' }}
